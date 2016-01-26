@@ -27,7 +27,7 @@ Layer_Reflection::~Layer_Reflection(void)
 {
 }
 
-Vector Layer_Reflection::SampleBlinnNormal(int layer)
+Vector Layer_Reflection::SampleAnisotropicNormal(int layer)
 {
 	int index=layer-1;
 	float ex = Ex[index];
@@ -183,18 +183,18 @@ void Layer_Reflection::Compute(void)
 void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 {
 	int LightLayerNum=Incidence.layerNum;
-	/*
+	
 	vector<Vector> LocalNormal;
 	for (int r=1;r<=NumOfLayer;r++)
 	{
-		Vector ln=SampleLocalNormal(r); 
+		Vector ln=SampleAnisotropicNormal(r);
 		LocalNormal.push_back(ln);
 	}
-	*/
+	
 	
 	//Compute the reflection of the first layer
 	Ray Top_reflection;
-    Reflection(Incidence,N[LightLayerNum],K[LightLayerNum],N[LightLayerNum+1],K[LightLayerNum+1],SampleBlinnNormal(LightLayerNum+1),LightLayerNum,Top_reflection);
+    Reflection(Incidence,N[LightLayerNum],K[LightLayerNum],N[LightLayerNum+1],K[LightLayerNum+1],LocalNormal[LightLayerNum],LightLayerNum,Top_reflection);
 
 	vector<Ray> refraction_ray,reflection_ray,final_reflection;
 
@@ -215,7 +215,7 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 		for (i=LightLayerNum;i < NumOfLayer-1;i++)
 		{
             temp_in = temp_out;
-			Refract(temp_in,N[i],N[i+1],SampleBlinnNormal(i+1),TIR,temp_in.layerNum+1,temp_out);
+			Refract(temp_in,N[i],N[i+1],LocalNormal[i],TIR,temp_in.layerNum+1,temp_out);
 			if (TIR==false && isNormalRefraction(temp_in.direction, temp_out.direction))
 				refraction_ray.push_back(temp_out);
 			else break;
@@ -229,7 +229,7 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 		{
 			Ray inc=refraction_ray[x];
             Ray temp;
-			Reflection(inc,N[inc.layerNum],K[inc.layerNum],N[inc.layerNum+1],K[inc.layerNum+1],SampleBlinnNormal(inc.layerNum+1),inc.layerNum,temp);
+			Reflection(inc,N[inc.layerNum],K[inc.layerNum],N[inc.layerNum+1],K[inc.layerNum+1],LocalNormal[inc.layerNum],inc.layerNum,temp);
 			if (isNormalReflection(inc.direction, temp.direction))
 				reflection_ray.push_back(temp);
 		}
@@ -246,7 +246,7 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
         Ray NewRefraction = reftemp;
 		for (int j=reflayer;j>0;j--)
 		{
-			Vector norm=SampleBlinnNormal(j);
+			Vector norm=SampleAnisotropicNormal(j);
             
 			//Calculate the reflections of the ray (reftemp)
 			Ray NewReflection;
@@ -272,7 +272,7 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 			//cout<<reftemp.Energy<<"   "<<reftemp.direction.z<<endl;
 
 			//Store the rays that survive and leave the surface
-			final_reflection.push_back(reftemp); 
+			final_reflection.push_back(NewRefraction); 
 		}
 		
 		//CollectData(reftemp);
@@ -287,24 +287,29 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 	//CollectData(Top_reflection);
 }
 
-void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector norm,bool &TIR,int layerNum,Ray & rayout)
+void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector localNormal,bool &TIR,int layerNum,Ray & rayout)
 {
 	//Compute refraction direction
 
 	float eta=n1/n2;
-	Vector in=Normalize(rayin.direction);
+	Vector indirection = Normalize(rayin.direction);
 	Vector outdirection;
     
-    GetSpecularRefractionDirection(in, norm, n1, n2, TIR, outdirection);
+    GetSpecularRefractionDirection(indirection, localNormal, n1, n2, TIR, outdirection);
     
-    float cosi = Dot(in,norm);
-    float IdotN = abs(Dot(in,norm));
+    if(TIR == true)
+    {
+        rayout = Ray();
+        return;
+    }
+    float cosi = Dot(indirection,localNormal);
+    float IdotN = abs(Dot(indirection,localNormal));
 	float k = 1 - eta*eta*(1 - IdotN*IdotN);
 //
-//    Vector normFromTheSameSide = norm;
+//    Vector normFromTheSameSide = localNormal;
 //    if (cosi > 0)
 //    {
-//        normFromTheSameSide = - norm;
+//        normFromTheSameSide = - localNormal;
 //    }
 	
 //
@@ -316,7 +321,7 @@ void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector norm,bool &
 //	else
 //	{
 //		TIR=false;
-//		outdirection= eta*in + (eta*IdotN - sqrt(k))*normFromTheSameSide;
+//		outdirection= eta*indirection+ (eta*IdotN - sqrt(k))*normFromTheSameSide;
 //	}
 //    
 //    outdirection=Normalize(outdirection);
@@ -332,7 +337,7 @@ void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector norm,bool &
 	theta_i=acosf(cosi);
 	theta_r=acosf(cost);
 	
-    rotationAngle(in, outdirection, Z, norm, Rotate_angle_in, Rotate_angle_ref);
+    rotationAngle(indirection, outdirection, Z, localNormal, Rotate_angle_in, Rotate_angle_ref);
 	//Calculate reference frame rotation
 
 //	Vector Si,Sr,Ei,Er,temp_in,temp_out;
@@ -406,19 +411,19 @@ void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector norm,bool &
 	rayout = RefractionRay;
 }
 
-void Layer_Reflection::Reflection(const Ray in, float eta_i,float k1, float eta_t,float k2, Vector norm,int layerNum,Ray & rayout)
+void Layer_Reflection::Reflection(const Ray in, float eta_i,float k1, float eta_t,float k2, Vector localNormal,int layerNum,Ray & rayout)
 {
 	// 从下往上反射时候，法向量应该和入射光在同侧
 	Vector outdirection;
-//    =Normalize(in.direction + 2*(AbsDot(in.direction,norm)*norm));   //reflection direction
-    GetSpecularReflectionDirection(in.direction, norm, eta_i, eta_t, outdirection);
+//    =Normalize(in.direction + 2*(AbsDot(in.direction,localNormal)*localNormal));   //reflection direction
+    GetSpecularReflectionDirection(in.direction, localNormal, eta_i, eta_t, outdirection);
 	
 	//k2
-	bool IsMetal=(k2!=0);
+//	bool IsMetal=(k2!=0);
 	
 	double cosi,cost,localtheta,Rotate_angle_ref,Rotate_angle_in;
 	
-	cosi=abs(Dot(in.direction,norm));
+	cosi=abs(Dot(in.direction,localNormal));
 	float sint=eta_i/eta_t*(sqrtf(1-cosi*cosi));
 	cost=sqrtf(1-sint*sint);
 
@@ -426,8 +431,8 @@ void Layer_Reflection::Reflection(const Ray in, float eta_i,float k1, float eta_
 	theta_i=acosf(cosi);
 	theta_r=acosf(cost);
 
-	localtheta=acos(Dot(norm,(in.direction)));  //local incident angle
-    rotationAngle(in.direction, outdirection, Z, norm, Rotate_angle_in, Rotate_angle_ref);
+	localtheta=acos(Dot(localNormal,(in.direction)));  //local incident angle
+    rotationAngle(in.direction, outdirection, Z, localNormal, Rotate_angle_in, Rotate_angle_ref);
 
 //	Vector Si,Sr,Ei,Er,temp_in,temp_out;
 //	Si=Cross(in.direction,Z);

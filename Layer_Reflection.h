@@ -22,7 +22,7 @@
 #include "Polarization.h"
 #include "Ray.h"
 #include "Fresnel.h"
-#include "windows.h"
+//#include "windows.h"
 #include "omp.h"
 #include <iostream>
 #include <fstream>
@@ -54,7 +54,7 @@ public:
 	Layer_Reflection(void);
 	~Layer_Reflection(void);
 	Vector SampleLocalNormal(int layer);
-	Vector SampleBlinnNormal(int layer);
+	Vector SampleAnisotropicNormal(int layer);
 	void Refract(Ray rayin, float n1, float n2, Vector norm,bool &TIR,int layerNum,Ray & rayout);
 	
 	void Reflection(const Ray in, float n1,float k1, float n2,float k2, Vector norm,int layerNum,Ray & rayout);

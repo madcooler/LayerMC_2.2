@@ -2,14 +2,9 @@
 #include <cstdlib>
 
 
-inline double AverageRandom(double min, double max)
+inline double RandomNum()
 {
-	int minInteger = (int)(min*10000);
-	int maxInteger = (int)(max*10000);
-	int randInteger = rand()*rand();
-	int diffInteger = maxInteger - minInteger;
-	int resultInteger = randInteger % diffInteger + minInteger;
-	return resultInteger/10000.0;
+	return rand()/(double)RAND_MAX;
 }
 
 inline double GaussianNoise(double variance,double mean)
@@ -17,8 +12,8 @@ inline double GaussianNoise(double variance,double mean)
 	
 	double Temp;
 	double u1,u2;
-	u1=AverageRandom(0,1);
-	u2=AverageRandom(0,1);
+	u1=RandomNum();
+	u2=RandomNum();
 	Temp=sqrt(-2*(log(u1)))*sin(2*M_PI*(u2));
 	Temp=variance*Temp+mean;	
 	return Temp;
@@ -39,8 +34,8 @@ inline void SampleAnisotropic(float ex,float ey, Vector &wh)
 {
 	float u1;
 	float u2;
-	u1 = AverageRandom(0,1);
-	u2 = AverageRandom(0,1);
+	u1 = RandomNum();
+	u2 = RandomNum();
 
 	float phi, costheta;
 
