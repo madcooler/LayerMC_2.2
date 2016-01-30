@@ -343,6 +343,10 @@ class JonesVec {
 			else
 				pd=sqrt(Sqr(s[2])+Sqr(s[1])+Sqr(s[3]))/s[0];	
 		}
+		void Print()
+		{
+			printf("\n I %f  Q %f U %f V %f \n",s[0],s[1],s[2],s[3]);
+		}
 		void GetDOLP()
 		{
 			if (s[0]==0)

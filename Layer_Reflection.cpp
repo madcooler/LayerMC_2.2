@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Layer_Reflection.h"
-
+#define TestNormal Normalize(Vector(1,-1,19))
+#define DebugMode false
 
 Layer_Reflection::Layer_Reflection(void)
 {
@@ -187,7 +188,10 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 	vector<Vector> LocalNormal;
 	for (int r=1;r<=NumOfLayer;r++)
 	{
-		Vector ln=SampleAnisotropicNormal(r);
+		Vector ln = SampleAnisotropicNormal(r);
+		if( DebugMode )
+			ln = TestNormal;
+		
 		LocalNormal.push_back(ln);
 	}
 	
@@ -217,7 +221,11 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
             temp_in = temp_out;
 			Refract(temp_in,N[i],N[i+1],LocalNormal[i],TIR,temp_in.layerNum+1,temp_out);
 			if (TIR==false && isNormalRefraction(temp_in.direction, temp_out.direction))
+			{
 				refraction_ray.push_back(temp_out);
+				if( DebugMode )
+					temp_out.Print();
+			}
 			else break;
 		}
 
@@ -231,7 +239,11 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
             Ray temp;
 			Reflection(inc,N[inc.layerNum],K[inc.layerNum],N[inc.layerNum+1],K[inc.layerNum+1],LocalNormal[inc.layerNum],inc.layerNum,temp);
 			if (isNormalReflection(inc.direction, temp.direction))
+			{	
 				reflection_ray.push_back(temp);
+				if( DebugMode )
+					temp.Print();
+			}
 		}
 	}
 
@@ -246,8 +258,9 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
         Ray NewRefraction = reftemp;
 		for (int j=reflayer;j>0;j--)
 		{
-			Vector norm=SampleAnisotropicNormal(j);
-            
+			Vector norm = SampleAnisotropicNormal(j);
+			if( DebugMode )
+				norm = TestNormal;
 			//Calculate the reflections of the ray (reftemp)
 			Ray NewReflection;
             reftemp = NewRefraction;
@@ -273,6 +286,8 @@ void Layer_Reflection::Trace_Incidence(Ray Incidence,vector<Ray> &IncidenceList)
 
 			//Store the rays that survive and leave the surface
 			final_reflection.push_back(NewRefraction); 
+			if( DebugMode )
+				NewRefraction.Print();
 		}
 		
 		//CollectData(reftemp);

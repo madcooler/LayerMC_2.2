@@ -34,5 +34,13 @@ public:
 			return true;
 		else return false;
 	}
+	void Print()
+	{
+		printf("Current Layer %d",layerNum);
+		printf("\n direction:");
+		direction.Print();
+		stokes.Print();
+		printf("\n");
+	}
 };
 
