@@ -5,17 +5,16 @@
 //  Created by Administrator on 21/01/16.
 //  Copyright © 2016 Administrator. All rights reserved.
 //
-
+#pragma once
 #ifndef Fresnel_h
 #define Fresnel_h
 
+#define MATH_RAD_TO_DEG 180/M_PI
+#define MATH_DEG_TO_RAD M_PI/180
 
 #endif /* Fresnel_h */
 
 #include "Vector.h"
-
-#define deg M_PI/180;
-#define Rad 180/M_PI;
 
 
 
@@ -85,8 +84,8 @@ inline void GetSpecularRefractionDirection(
 inline void GetSpecularReflectionDirection(
             const Vector incidentDirection,
             const Vector normalDirection,
-            const double  n_i,
-            const double  n_t,
+            //const double  n_i,
+            //const double  n_t,
                   Vector & refractionDirection
             )
 {
@@ -107,54 +106,99 @@ inline void GetSpecularReflectionDirection(
 
 
 
-inline void Fresnel_Refraction(float theta,float n1,float k1, float n2,float k2,float &phase,float &Ts,float &Tp,float &TsTp,float &factor) 
+inline double Fresnel_Refraction(double theta,double n1,double k1, double n2,double k2,double &phase,double &Ts,double &Tp,double &TsTp,double &factor) 
 {
-	float nab=n1/n2;
-	float theta_t=asin(n1*sin(theta)/n2);
-	Tp=(2*nab*cos(theta)/(cos(theta)+nab*cos(theta_t)))*(2*nab*cos(theta)/(cos(theta)+nab*cos(theta_t)));
-	Ts=(2*nab*cos(theta)/(nab*cos(theta)+cos(theta_t)))*(2*nab*cos(theta)/(nab*cos(theta)+cos(theta_t)));
-	phase=0;
-	TsTp=(4*nab*nab*cos(theta)*cos(theta))/((cos(theta)+nab*cos(theta_t))*(nab*cos(theta)+cos(theta_t)));
+	double nab = n1 / n2;
+	double theta_t = asin( n1*sin(theta) / n2 );
 
-	float nba=n2/n1;
-	factor=nba*nba*nba*(cos(theta_t)/cos(theta));
+	Tp = ( 2 * nab * cos(theta) / ( cos(theta) + nab * cos(theta_t))) *
+		( 2 * nab * cos(theta) / ( cos(theta) + nab * cos(theta_t)));
+	Ts = ( 2 * nab * cos(theta) / ( nab * cos(theta) + cos(theta_t))) *
+		( 2 * nab * cos(theta) / ( nab * cos(theta) + cos(theta_t)));
+	phase = 0;
+	TsTp = ( 4 * nab * nab * cos(theta) * cos(theta) ) /
+		( ( cos(theta) + nab * cos(theta_t) ) * ( nab * cos(theta) + cos(theta_t) ) );
+
+	double nba = n2 / n1;
+	factor = /* nba * nba * */ nba * ( cos(theta_t)/cos(theta) );
+
+	return factor * ( Ts + Tp ) / 2;
 }
 
-inline float Fresnel_Reflection(float theta,float n1,float k1, float n2,float k2,float &rs,float &rp,float &phaseS,float &phaseP,float &Fs,float &Fp) 
+inline double Fresnel_Reflection(double theta,double n1,double k1, double n2,double k2,double &rs,double &rp,double &phaseS,double &phaseP,double &Fs,double &Fp) 
 {
-	float temp=(n2*n2-k2*k2-n1*n1*sin(theta)*sin(theta));
-	float p2 = (sqrt(temp*temp+4*n2*n2*k2*k2)+temp)/2;
-	float q2 = (sqrt(temp*temp+4*n2*n2*k2*k2)-temp)/2;
-	float p=sqrt(p2),q=sqrt(q2);
-	
-	Fs=((n1*cos(theta)-p)*(n1*cos(theta)-p)+q2)/((n1*cos(theta)+p)*(n1*cos(theta)+p)+q2);
-	Fp=Fs*((p-n1*sin(theta)*tan(theta))*(p-n1*sin(theta)*tan(theta)) +q2)
-		/((p+n1*sin(theta)*tan(theta))*(p+n1*sin(theta)*tan(theta)) +q2);
+	double temp = ( n2*n2 - k2*k2 - n1*n1*sin(theta)*sin(theta) );
+	double p2   = ( sqrt(temp*temp+4*n2*n2*k2*k2) + temp ) / 2;
+	double q2   = ( sqrt(temp*temp+4*n2*n2*k2*k2) - temp ) / 2;
+	double p    =   sqrt(p2);
+	double q    =   sqrt(q2);
 
-	if (n1>n2&k2==0)
-	{
-		phaseS=180*deg;
-		phaseP=360*deg;
-	}
-	float ThetaBrewster=atanf(n2/n1);
-	if (n1<n2&&k2==0)
-	{
-		phaseS=180;
-		if (theta>ThetaBrewster)
-			phaseP=180;
-		else phaseP=0;
-	}
-	if (k2!=0)
-	{
-		phaseS=atanf(2*n1*q*cos(theta)/(n1*n1*cos(theta)*cos(theta)-p2-q2));
-		phaseP=atanf((-2*n1*q*cos(theta)*(p2+q2-n1*n1*sin(theta)*sin(theta)))/((n2*n2+k2*k2)*(n2*n2+k2*k2)*cos(theta)*cos(theta)-n1*n1*(p2+q2)));
-	}
-	
+	double brewsterAngle = atanf( n2 / n1 );
 
-	rs=sqrt(abs(Fs));
-	rp=sqrt(abs(Fp));
 
-	return (Fs+Fp)/2;
+	Fs = ( ( n1 * cos(theta) - p ) * ( n1 * cos(theta) - p ) + q2 ) /
+		( ( n1 * cos(theta) + p ) * ( n1 * cos(theta) + p ) + q2);
+	Fp = ( Fs ) * ( ( p - n1 * sin(theta) * tan(theta) ) *
+		(   p - n1 * sin(theta) * tan(theta) ) + q2 )
+		/ ( ( p + n1 * sin(theta) * tan(theta) )
+		* ( p + n1 * sin(theta) * tan(theta) ) + q2 );
+
+	// phase shift for dielectric materials
+	// please refer to section 8.2 of < Polarised Light, second edition >,  Dennis Goldstein
+	if ( n1 > n2 && k2 == 0 )
+	{
+		double criticalAngle = asin ( n2 / n1 );
+
+		if ( theta < criticalAngle )
+			phaseS  = 0 ;
+		else 
+			phaseS = 2 * atan( sqrt( sin( theta ) * sin( theta )
+			- sin( criticalAngle ) * sin( criticalAngle )
+			)
+			/ cos(criticalAngle)
+			);
+
+
+		if ( theta < brewsterAngle )
+			phaseP = 180 * MATH_DEG_TO_RAD;
+		else
+			if ( theta < criticalAngle )
+				phaseP  = 0 * MATH_DEG_TO_RAD;
+			else 
+				phaseP = 2 * atan( sqrt( sin(theta) * sin(theta)
+				- sin( criticalAngle ) * sin( criticalAngle )
+				)
+				/ ( cos(criticalAngle) * sin( criticalAngle ) * sin( criticalAngle )
+				)
+				);
+	}
+
+	if ( n1 < n2 && k2 == 0 )
+	{
+		phaseS = 180 * MATH_DEG_TO_RAD;
+		phaseP = ( theta < brewsterAngle ) ? 0
+			: 180 * MATH_DEG_TO_RAD;
+	}
+
+	// metal material phase shift
+	if ( k2 != 0 )
+	{
+		phaseS = atanf( 2 * n1 * q * cos(theta) / ( n1 * n1 * cos(theta) * cos(theta)- p2 - q2 ) );
+		phaseP = atanf(
+			(
+			-2 * n1 * q * cos(theta)
+			* ( p2 + q2 - n1 * n1 * sin(theta) * sin(theta)) )
+			/ (
+			( n2 * n2 + k2 * k2 ) * ( n2 * n2 + k2 * k2) * cos(theta) * cos(theta) - n1 * n1 * ( p2 + q2 )
+			)
+			);
+	}
+
+
+	rs = sqrt( abs (Fs) );
+	rp = sqrt( abs (Fp) );
+
+	return ( Fs + Fp ) / 2;
 }
 
 inline void rotationAngle(
