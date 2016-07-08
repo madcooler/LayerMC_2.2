@@ -84,8 +84,8 @@ inline void GetSpecularRefractionDirection(
 inline void GetSpecularReflectionDirection(
             const Vector incidentDirection,
             const Vector normalDirection,
-            //const double  n_i,
-            //const double  n_t,
+            const double  n_i,
+            const double  n_t,
                   Vector & refractionDirection
             )
 {

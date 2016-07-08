@@ -106,8 +106,8 @@ void Layer_Reflection::AddLayer(float n, float k,float rx,float ry,float lx,floa
 // Set the initial incident light
 void Layer_Reflection::SetIncidence(float theta, float phi, StokesVector stokes)
 {
-	theta=theta*deg;
-	phi=phi*deg;
+	theta=theta*MATH_RAD_TO_DEG;
+	phi=phi*MATH_RAD_TO_DEG;
 	float sintheta=sin(theta),costheta=cos(theta);
 	
 	OriginIncidence.direction=Vector(sintheta * cosf(phi),sintheta * sinf(phi),-costheta);
@@ -129,14 +129,14 @@ void Layer_Reflection::CollectData(Ray ray)
 		
 		float costheta=CosBetweenVector(d,Z);
 		float temp=acosf(costheta);
-		temp=temp*Rad;
+		temp = temp * MATH_DEG_TO_RAD;
 		//thetaDeg=(int)temp;
 		//int temp1=(int)temp;
 		thetaDeg=(int)(temp+0.5);  // >=temp?temp1+1:temp1;
 		thetaDeg=Clamp(thetaDeg,0,90);
 		
 
-		float absphi=abs(atanf(y/x))*Rad;
+		float absphi = abs(atanf(y/x)) * MATH_DEG_TO_RAD;
 		//int temp2=(int)absphi;
 		phiDeg=(int)(absphi+0.5);//(2*temp2+1)>=2*absphi?temp2+1:temp2;
 
@@ -394,7 +394,7 @@ void Layer_Reflection::Refract(Ray rayin, float n1, float n2, Vector localNormal
 	//Compute ts tp
 	
 
-	float Ts,Tp,TsTp,phase,factor;
+	double Ts,Tp,TsTp,phase,factor;
 	Fresnel_Refraction(theta_i,n1,0,n2,0,phase,Ts,Tp,TsTp,factor);
 	
 	
@@ -482,7 +482,7 @@ void Layer_Reflection::Reflection(const Ray in, float eta_i,float k1, float eta_
 //		Rotate_angle_ref=2*M_PI-Rotate_angle_ref;
 //	}
 
-	float rs,rp,phaseS,phaseP,Fs,Fp;
+	double rs,rp,phaseS,phaseP,Fs,Fp;
 	Fresnel_Reflection(theta_i,eta_i,k1,eta_t,k2,rs,rp,phaseS,phaseP,Fs,Fp);
 
 	float A,B,C,S;
